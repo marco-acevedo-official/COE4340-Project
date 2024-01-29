@@ -2,7 +2,7 @@ int tx = 1; //Pin for transmitting serial data
 int rx = 0; //Pin for receiving serial data
 int i,j; //Variables for 'for' loops
 unsigned long time_to_read=1000; //Time for pause and wait for data to fully arrive
-unsigned long hora_cuando_empeze_a_medir,elapsed_time,curr_time;//variables for millis() function
+unsigned long startTime,elapsed_time,curr_time;//variables for millis() function
 const int MAX_ENTRIES = 20; //Maximum size for List struct aka 'max password size'
 const int password[] = {109,97,114,99,111};//ASCII Decimal 'marco'
 const int passwordSize = 5;
@@ -104,27 +104,23 @@ void loop()
   lcd.print("Enter Password");
 
 
-  if(consume())
+  if(consume()) //Checks to see if there is data on the Serial comms
   {
-    cleanBuffer(); //Removes garbage data
+    cleanBuffer(); //Removes garbage data from the buffer
 
-    lcd.clear();
-    lcd.print("Password Entered");
-    lcd.setCursor(0, 1);
-    lcd.print(bufferToString());
-
-    if(isPassword())
+    if(isPassword()) //User entered the correct Password
     {
       lcd.clear();
-      lcd.print("Unlock");
-      unlock();
-      buffer.clear();
+      lcd.print("Correct Password");
+
+      unlock(); //Function to perform on correct password entered
+      buffer.clear(); //Deletes the data structure, making it ready for the next attempt
     }
-    else
+    else//Wrong password entered
     {
-      buffer.clear();
+      lcd.print("Incorrect Password");
+      buffer.clear(); //Deletes the data structure, making it ready for the next attempt
     }
-  delay(2000);
   }
 }
 
@@ -132,35 +128,40 @@ bool consume() //Returns false if nothing was consumed
 { 
   while(Serial.available() > 0)//When the first byte arrives
   {
-    hora_cuando_empeze_a_medir = millis();
+    startTime = millis();
     curr_time = millis();
-    elapsed_time = curr_time - hora_cuando_empeze_a_medir;
+    elapsed_time = curr_time - startTime;
+
     while(elapsed_time < time_to_read)//Wait for all the data to arrive. BT comms is slower than CPU
     {
       curr_time = millis();
-      elapsed_time = curr_time - hora_cuando_empeze_a_medir;
+      elapsed_time = curr_time - startTime;
     }
-    while(Serial.available()>0)//Gave BT time, now should be OK to read fast
+
+    while(Serial.available()>0)//Some time passed after first byte was received
     {
       int temp = Serial.read();//Read byte
-      if(temp != -1)//if no data available, dont push to buffer
+      if(temp != -1)//Only push valid ASCII characters
       {
         buffer.push(temp);
       }
     }
+
   }
+
   if(buffer.isEmpty())
   {
     return false;
   }
+
   return true;
 }
 
 bool cleanBuffer() //Function to delete non viewable ascii characters and everything after; returns true on success
 {
-  int temp = searchEnd();//Find the end of the usable characters
+  int temp = searchEnd();//Find the end of the usable characters. Returns -1 on fail
   if(temp == -1){return false;}
-  while(buffer.count>temp)//delete garbage data after ascii carriage return
+  while(buffer.count > temp)//delete garbage data after ascii carriage return
   {
     buffer.pop();
   }
@@ -172,7 +173,7 @@ int searchEnd()//Searches for the end of transmission. Defined by ASCII 13, retu
   for(i=0;i<(buffer.size()-1);i++)
   {
     int temp = buffer.get(i);
-    if(temp==(13))
+    if(temp==(13))//ASCI Character 13 is the end of usable transmission data
     {
       return i;
     }
@@ -182,7 +183,8 @@ int searchEnd()//Searches for the end of transmission. Defined by ASCII 13, retu
 
 bool isPassword()//Returns true on correct password
 { 
-  if(buffer.count!=passwordSize){buffer.clear();return false;}
+  if(buffer.count!=passwordSize){buffer.clear();return false;}//Returns false of password are not the same size
+
   for(i=0;i<passwordSize;i++)
   {
     if((buffer.get(i))!=(password[i]))
@@ -193,18 +195,10 @@ bool isPassword()//Returns true on correct password
   return true;
 }
 
-void unlock()//TO-DO
+void unlock()//Function to perform after correct password was validated
 {
   Serial.println("unlock");
+  lcd.clear();
+  lcd.print("Unlocking device")
+  delay(1000);
 }
-
-String bufferToString()
-{
-  char content[buffer.size()+1];
-  for(i=0;i<buffer.size();i++){
-    content[i]=buffer.get(i);
-  }
-  content[buffer.size()]=0;
-  String s = content;
-}
-
