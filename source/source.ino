@@ -6,6 +6,7 @@ unsigned long startTime,elapsed_time,curr_time;//variables for millis() function
 const int MAX_ENTRIES = 20; //Maximum size for List struct aka 'max password size'
 const int password[] = {109,97,114,99,111};//ASCII Decimal 'marco'
 const int passwordSize = 5;
+bool refreshLCD;
 
 #include <LiquidCrystal.h>
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
@@ -96,13 +97,18 @@ void setup()
   buffer.init();
   lcd.begin(16, 2);
   lcd.print("Booting");
+  refreshLCD=true;
 }
 
 void loop()
 {
-  lcd.clear();
-  lcd.print("Enter Password");
 
+  if(refreshLCD) //Constant Function Calling if no data to consume
+  {
+    lcd.clear();
+    lcd.print("Enter Password");
+    refreshLCD=false;
+  }
 
   if(consume()) //Checks to see if there is data on the Serial comms
   {
@@ -112,16 +118,22 @@ void loop()
     {
       lcd.clear();
       lcd.print("Correct Password");
-
+      Serial.println("Correct Password");
       unlock(); //Function to perform on correct password entered
       buffer.clear(); //Deletes the data structure, making it ready for the next attempt
+      delay(2000);
     }
     else//Wrong password entered
     {
-      lcd.print("Incorrect Password");
+      lcd.clear();
+      lcdPrintWrap("Incorrect Password",0,0);
+      Serial.println("Inorrect Password");
       buffer.clear(); //Deletes the data structure, making it ready for the next attempt
+      delay(2000);
     }
+    refreshLCD=true;
   }
+
 }
 
 bool consume() //Returns false if nothing was consumed
@@ -199,6 +211,15 @@ void unlock()//Function to perform after correct password was validated
 {
   Serial.println("unlock");
   lcd.clear();
-  lcd.print("Unlocking device")
+  lcd.print("Unlocking device");
   delay(1000);
+}
+
+void lcdPrintWrap(const String &text, int col, int row) {
+  int maxLength = 16;
+  int length = text.length();
+  String s = text.substring(16);
+  lcd.print(text);
+  lcd.setCursor(0, 1);
+  lcd.print(s);
 }
