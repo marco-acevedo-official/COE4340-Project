@@ -9,6 +9,7 @@ const int passwordSize = 5;
 bool refreshLCD;
 const int stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
 const int rolePerMinute = 15;         // Adjustable range of 28BYJ-48 stepper is 0~17 rpm
+int failCounter=0;
 #include <LiquidCrystal.h>
 #include <Stepper.h>
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
@@ -105,13 +106,21 @@ void setup()
   refreshLCD=true;
   //Initialization of Stepper
   myStepper.setSpeed(rolePerMinute);
-
+  failCounter=0;
 
 }
 
 void loop()
 {
 
+  if(failCounter>3){
+    Serial.println("Too many incorrect attemps");
+    lcd.clear();
+    lcd.print("Incorrect! Wait");
+    lcd.setCursor(0, 1);
+    lcd.print("for 2 minutes");
+    delay(120000);
+  }
   if(refreshLCD) //Constant Function Calling if no data to consume
   {
     lcd.clear();
@@ -125,6 +134,7 @@ void loop()
 
     if(isPassword()) //User entered the correct Password
     {
+      failCounter=0;
       lcd.clear();
       lcd.print("Correct Password");
       Serial.println("Correct Password");
@@ -134,6 +144,7 @@ void loop()
     }
     else//Wrong password entered
     {
+      failCounter++;
       lcd.clear();
       lcdPrintWrap("Incorrect Password",0,0);
       Serial.println("Inorrect Password");
