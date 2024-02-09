@@ -7,10 +7,12 @@ const int MAX_ENTRIES = 20; //Maximum size for List struct aka 'max password siz
 const int password[] = {109,97,114,99,111};//ASCII Decimal 'marco'
 const int passwordSize = 5;
 bool refreshLCD;
-
+const int stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
+const int rolePerMinute = 15;         // Adjustable range of 28BYJ-48 stepper is 0~17 rpm
 #include <LiquidCrystal.h>
+#include <Stepper.h>
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
-
+Stepper myStepper(stepsPerRevolution, 48, 50, 49, 51);
 struct List
 {
   int entries[MAX_ENTRIES];
@@ -91,13 +93,20 @@ List buffer;
 
 void setup()
 {
+  //Initialization of Serial Interface
   Serial.begin(9600);
   pinMode(tx, OUTPUT);
   pinMode(rx, INPUT);
+  //Initialization of List
   buffer.init();
+  //Initialization of LCD
   lcd.begin(16, 2);
   lcd.print("Booting");
   refreshLCD=true;
+  //Initialization of Stepper
+  myStepper.setSpeed(rolePerMinute);
+
+
 }
 
 void loop()
@@ -212,6 +221,9 @@ void unlock()//Function to perform after correct password was validated
   Serial.println("unlock");
   lcd.clear();
   lcd.print("Unlocking device");
+  myStepper.setSpeed(stepsPerRevolution);
+  delay(1000);
+  myStepper.setSpeed(-stepsPerRevolution);
   delay(1000);
 }
 
